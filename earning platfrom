@@ -1,0 +1,41 @@
+mkdir model_store
+cd model_stor
+from flask import Flask, render_template, request
+import stripe
+
+app = Flask(__name__)
+stripe.api_key = 'your_stripe_secret_key'
+
+# Route for home page
+@app.route('/')
+def home():
+    return render_template('index.html')
+
+# Route for model details page
+@app.route('/model/<int:model_id>')
+def model_details(model_id):
+    # Fetch model details from the database based on model_id
+    model = fetch_model_from_database(model_id)
+    return render_template('model_details.html', model=model)
+
+# Route for checkout page
+@app.route('/checkout', methods=['POST'])
+def checkout():
+    # Process payment using Stripe API
+    token = request.form['stripeToken']
+    amount = request.form['amount']  # Amount in cents
+    try:
+        charge = stripe.Charge.create(
+            amount=amount,
+            currency='usd',
+            description='Model Purchase',
+            source=token,
+        )
+        # Payment successful, update database or send confirmation email
+        return render_template('checkout_success.html')
+    except stripe.error.CardError as e:
+        # Payment failed, display error message to user
+        return render_template('checkout_error.html', error_message=e.error.message)
+
+if __name__ == '__main__':
+    app.run(debug=True)
